@@ -9,6 +9,8 @@ export default function MessageList({
   onJoinMeeting,
   onEndConsultation,
   appointmentActionLoadingId,
+  onPaymentRequired,
+  appointmentPaymentStatus,
 }) {
   const messagesEndRef = useRef(null);
 
@@ -43,6 +45,8 @@ export default function MessageList({
             onJoinMeeting={onJoinMeeting}
             onEndConsultation={onEndConsultation}
             appointmentActionLoadingId={appointmentActionLoadingId}
+            onPaymentRequired={onPaymentRequired}
+            appointmentPaymentStatus={appointmentPaymentStatus}
           />
         </div>
       ))}

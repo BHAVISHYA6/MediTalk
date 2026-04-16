@@ -11,6 +11,7 @@ export const authService = {
       formData.append('role', userData.role);
       formData.append('specialization', userData.specialization);
       formData.append('experience', userData.experience || 0);
+      formData.append('consultationFee', userData.consultationFee || 500);
       formData.append('standoutReason', userData.standoutReason);
       formData.append('certification', userData.certificationFile);
 

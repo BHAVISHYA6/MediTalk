@@ -10,6 +10,8 @@ export default function MessageItem({
   onJoinMeeting,
   onEndConsultation,
   appointmentActionLoadingId,
+  onPaymentRequired,
+  appointmentPaymentStatus,
 }) {
   const formatTime = (date) => {
     try {
@@ -49,6 +51,10 @@ export default function MessageItem({
     if (message.messageType === 'appointment') {
       const appointmentId = message.metadata?.appointmentId;
       const appointmentStatus = message.metadata?.status || 'pending';
+      const paymentStatus = appointmentId
+        ? appointmentPaymentStatus?.[String(appointmentId)] || message.metadata?.paymentStatus || 'not_initiated'
+        : 'not_initiated';
+      const isPaymentCompleted = paymentStatus === 'completed';
       const hasJoined = Boolean(message.metadata?.hasJoined);
       const appointmentTimeState = {
         status: appointmentStatus,
@@ -101,6 +107,35 @@ export default function MessageItem({
                 </button>
               )}
             </div>
+          )}
+
+          {appointmentStatus === 'completed' && currentUserRole === 'patient' && !isOwn && appointmentId && (
+            <div className="flex gap-2 mt-3">
+              {isPaymentCompleted ? (
+                <div className="px-3 py-1.5 bg-green-100 text-green-800 rounded-lg font-medium text-sm">
+                  Payment Done
+                </div>
+              ) : (
+                <button
+                  onClick={() => onPaymentRequired && onPaymentRequired(message.metadata)}
+                  className="px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium"
+                >
+                  💳 Pay Now
+                </button>
+              )}
+            </div>
+          )}
+
+          {appointmentStatus === 'completed' && currentUserRole === 'doctor' && appointmentId && (
+            isPaymentCompleted ? (
+              <div className="mt-2 text-xs text-blue-700 bg-blue-100 p-2 rounded">
+                Payment completed. You can now send prescription.
+              </div>
+            ) : (
+              <div className="mt-2 text-xs text-green-700 bg-green-100 p-2 rounded">
+                Appointment completed. Waiting for patient payment before sending prescription.
+              </div>
+            )
           )}
 
           {canPatientRespond && (

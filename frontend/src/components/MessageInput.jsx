@@ -9,6 +9,8 @@ export default function MessageInput({
   otherUserRole,
   currentUserRole,
   onCreateAppointment,
+  onSendPrescription,
+  canSendPrescription = false,
 }) {
   const [message, setMessage] = useState('');
   const [showPrescription, setShowPrescription] = useState(false);
@@ -94,10 +96,16 @@ export default function MessageInput({
       {isDoctorMode && (
         <div className="flex gap-2 mb-3">
           <button
-            onClick={() => setShowPrescription(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm font-medium"
+            onClick={() => onSendPrescription ? onSendPrescription() : setShowPrescription(true)}
+            disabled={!canSendPrescription}
+            title={
+              canSendPrescription
+                ? 'Send prescription'
+                : 'Available only after appointment is completed and payment is done'
+            }
+            className="flex items-center gap-2 px-3 py-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 text-sm font-medium disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
-            💊 Prescription
+            💊 Send Prescription
           </button>
           <button
             onClick={() => setShowAppointment(true)}

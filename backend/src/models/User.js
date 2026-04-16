@@ -39,6 +39,11 @@ const UserSchema = new mongoose.Schema(
       type: Number,
       min: 0,
     },
+    consultationFee: {
+      type: Number,
+      min: 0,
+      default: 500,
+    },
     standoutReason: {
       type: String,
       trim: true,

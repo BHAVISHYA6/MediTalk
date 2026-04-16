@@ -12,6 +12,7 @@ const Signup = () => {
     role: 'patient',
     specialization: '',
     experience: '',
+    consultationFee: '500',
     standoutReason: '',
   });
   const [certificationFile, setCertificationFile] = useState(null);
@@ -212,6 +213,22 @@ const Signup = () => {
                     value={formData.experience}
                     onChange={handleChange}
                     placeholder="0"
+                    min="0"
+                    disabled={loading}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Consultation Fee (USD)
+                  </label>
+                  <input
+                    type="number"
+                    name="consultationFee"
+                    value={formData.consultationFee}
+                    onChange={handleChange}
+                    placeholder="500"
                     min="0"
                     disabled={loading}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"

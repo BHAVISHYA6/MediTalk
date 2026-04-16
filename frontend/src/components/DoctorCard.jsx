@@ -46,6 +46,9 @@ const DoctorCard = ({ doctor }) => {
         <p className="text-sm text-gray-600">
           <span className="font-medium">Experience:</span> {doctor.experience} years
         </p>
+        <p className="text-sm text-gray-600">
+          <span className="font-medium">Consultation Fee:</span> ${doctor.consultationFee ?? 500}
+        </p>
         <div className="flex items-center gap-2">
           <div className="flex gap-0.5 text-sm">
             {renderStars(doctor.averageRating)}

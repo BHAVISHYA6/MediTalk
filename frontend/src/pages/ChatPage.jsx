@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import axiosInstance from '../services/axios.jsx';
 import { appointmentService } from '../services/appointmentService.jsx';
 import { doctorService } from '../services/doctorService.jsx';
+import { paymentService } from '../services/paymentService.jsx';
 import {
   initializeSocket,
   sendMessage,
@@ -13,6 +14,8 @@ import {
 import MessageInput from '../components/MessageInput';
 import MessageList from '../components/MessageList';
 import MandatoryRatingModal from '../components/MandatoryRatingModal.jsx';
+import PaymentModal from '../components/PaymentModal.jsx';
+import PrescriptionForm from '../components/PrescriptionForm.jsx';
 
 export default function ChatPage() {
   const { userId } = useParams();
@@ -27,6 +30,10 @@ export default function ChatPage() {
   const [typingUser, setTypingUser] = useState(null);
   const [appointmentActionLoadingId, setAppointmentActionLoadingId] = useState(null);
   const [pendingRatings, setPendingRatings] = useState([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
+  const [completedAppointment, setCompletedAppointment] = useState(null);
+  const [appointmentPaymentStatus, setAppointmentPaymentStatus] = useState({});
   const backPath = '/messages';
 
   // Initialize socket and fetch chat history
@@ -84,7 +91,21 @@ export default function ChatPage() {
       setTypingUser(null);
     };
 
+    const handlePaymentCompleted = ({ appointmentId }) => {
+      if (!appointmentId) return;
+      setAppointmentPaymentStatus((prev) => ({
+        ...prev,
+        [String(appointmentId)]: 'completed',
+      }));
+    };
+
     const handleAppointmentStatusUpdated = ({ appointmentId, status, appointment }) => {
+      // Show payment modal for patient when appointment is completed
+      if (status === 'completed' && user?.role === 'patient') {
+        setCompletedAppointment(appointment);
+        setShowPaymentModal(true);
+      }
+
       setMessages((prev) =>
         prev.map((msg) => {
           const msgAppointmentId = msg.metadata?.appointmentId;
@@ -131,14 +152,65 @@ export default function ChatPage() {
     socket.on('user_typing', handleUserTyping);
     socket.on('user_stop_typing', handleUserStopTyping);
     socket.on('appointment_status_updated', handleAppointmentStatusUpdated);
+    socket.on('payment_completed', handlePaymentCompleted);
 
     return () => {
       socket.off('receive_message', handleReceiveMessage);
       socket.off('user_typing', handleUserTyping);
       socket.off('user_stop_typing', handleUserStopTyping);
       socket.off('appointment_status_updated', handleAppointmentStatusUpdated);
+      socket.off('payment_completed', handlePaymentCompleted);
     };
   }, [user?.id, userId]);
+
+  useEffect(() => {
+    const completedAppointmentIds = [
+      ...new Set(
+        messages
+          .filter(
+            (msg) =>
+              msg.messageType === 'appointment' &&
+              msg.metadata?.appointmentId &&
+              msg.metadata?.status === 'completed'
+          )
+          .map((msg) => String(msg.metadata.appointmentId))
+      ),
+    ];
+
+    const unresolvedIds = completedAppointmentIds.filter(
+      (appointmentId) => appointmentPaymentStatus[appointmentId] === undefined
+    );
+
+    if (unresolvedIds.length === 0) return;
+
+    let cancelled = false;
+
+    const fetchPaymentStatuses = async () => {
+      for (const appointmentId of unresolvedIds) {
+        try {
+          const response = await paymentService.getPaymentStatus(appointmentId);
+          const status = response?.data?.status || 'not_initiated';
+          if (cancelled) return;
+          setAppointmentPaymentStatus((prev) => ({
+            ...prev,
+            [String(appointmentId)]: status,
+          }));
+        } catch {
+          if (cancelled) return;
+          setAppointmentPaymentStatus((prev) => ({
+            ...prev,
+            [String(appointmentId)]: 'not_initiated',
+          }));
+        }
+      }
+    };
+
+    fetchPaymentStatuses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [messages]);
 
   const fetchChatHistory = async () => {
     try {
@@ -328,6 +400,88 @@ export default function ChatPage() {
     setPendingRatings((prev) => prev.filter((appt) => String(appt._id) !== String(appointmentId)));
   };
 
+  const handlePaymentSuccess = (paymentData) => {
+    setShowPaymentModal(false);
+    if (completedAppointment?._id) {
+      setAppointmentPaymentStatus((prev) => ({
+        ...prev,
+        [String(completedAppointment._id)]: 'completed',
+      }));
+    }
+    // Show notification that payment was successful
+    if (completedAppointment) {
+      alert('Payment successful! Doctor will send prescription shortly.');
+    }
+  };
+
+  const handlePrescriptionSuccess = (prescriptionData) => {
+    setShowPrescriptionForm(false);
+    // Refresh messages to show the new prescription message
+    fetchChatHistory();
+    alert('Prescription sent successfully!');
+  };
+
+  const openPrescriptionForm = (appointment) => {
+    setCompletedAppointment(appointment);
+    setShowPrescriptionForm(true);
+  };
+
+  const findLatestPaidCompletedAppointment = () => {
+    const appointmentMessages = messages
+      .filter(
+        (msg) =>
+          msg.messageType === 'appointment' &&
+          msg.metadata?.appointmentId &&
+          msg.metadata?.status === 'completed'
+      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    for (const msg of appointmentMessages) {
+      const appointmentId = String(msg.metadata.appointmentId);
+      const paymentStatus =
+        appointmentPaymentStatus[appointmentId] || msg.metadata?.paymentStatus || 'not_initiated';
+
+      if (paymentStatus === 'completed') {
+        return {
+          _id: msg.metadata.appointmentId,
+          ...msg.metadata,
+        };
+      }
+    }
+
+    return null;
+  };
+
+  const handleSendPrescription = () => {
+    const paidAppointment = findLatestPaidCompletedAppointment();
+    if (!paidAppointment) {
+      alert('Prescription can only be sent after patient payment is completed for a completed appointment.');
+      return;
+    }
+
+    openPrescriptionForm(paidAppointment);
+  };
+
+  const handlePaymentRequired = (appointmentMetadata) => {
+    if (appointmentMetadata?.appointmentId) {
+      const appointmentId = String(appointmentMetadata.appointmentId);
+      const status =
+        appointmentPaymentStatus[appointmentId] || appointmentMetadata?.paymentStatus || 'not_initiated';
+
+      if (status === 'completed') {
+        alert('Payment already completed for this appointment.');
+        return;
+      }
+
+      // Set the completed appointment for the payment modal
+      setCompletedAppointment({
+        _id: appointmentMetadata.appointmentId,
+        ...appointmentMetadata,
+      });
+      setShowPaymentModal(true);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -364,6 +518,24 @@ export default function ChatPage() {
         />
       )}
 
+      {/* Payment Modal */}
+      {showPaymentModal && completedAppointment && (
+        <PaymentModal
+          appointment={completedAppointment}
+          onClose={() => setShowPaymentModal(false)}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
+
+      {/* Prescription Form */}
+      {showPrescriptionForm && completedAppointment && (
+        <PrescriptionForm
+          appointment={completedAppointment}
+          onClose={() => setShowPrescriptionForm(false)}
+          onSuccess={handlePrescriptionSuccess}
+        />
+      )}
+
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -394,6 +566,8 @@ export default function ChatPage() {
         onJoinMeeting={handleJoinMeeting}
         onEndConsultation={handleEndConsultation}
         appointmentActionLoadingId={appointmentActionLoadingId}
+        onPaymentRequired={handlePaymentRequired}
+        appointmentPaymentStatus={appointmentPaymentStatus}
       />
 
       {/* Typing Indicator */}
@@ -413,6 +587,8 @@ export default function ChatPage() {
         otherUserRole={otherUser?.role}
         currentUserRole={user.role}
         onCreateAppointment={handleCreateAppointment}
+        onSendPrescription={handleSendPrescription}
+        canSendPrescription={Boolean(findLatestPaidCompletedAppointment())}
       />
     </div>
   );

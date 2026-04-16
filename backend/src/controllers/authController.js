@@ -4,7 +4,7 @@ import { sendResponse } from '../utils/response.js';
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password, role, specialization, experience, standoutReason } = req.body;
+    const { name, email, password, role, specialization, experience, consultationFee, standoutReason } = req.body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -45,6 +45,7 @@ export const register = async (req, res, next) => {
     if (role === 'doctor') {
       userData.specialization = specialization;
       userData.experience = experience || 0;
+      userData.consultationFee = consultationFee ? Number(consultationFee) : 500;
       userData.standoutReason = standoutReason;
       userData.certificationFile = `/uploads/${req.file.filename}`;
       userData.verificationStatus = 'pending';

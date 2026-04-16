@@ -15,6 +15,8 @@ import reviewRoutes from './routes/reviewRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import prescriptionRoutes from './routes/prescriptionRoutes.js';
 import { setupSocketIO } from './socket/socketHandler.js';
 import morgan from "morgan";
 import Review from './models/Review.js';
@@ -48,6 +50,8 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/prescriptions', prescriptionRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { paymentService } from '../services/paymentService';
+import { downloadPaymentReceiptPdf } from '../utils/documentPdf.js';
 
 export default function PaymentModal({ appointment, onClose, onPaymentSuccess }) {
   const [step, setStep] = useState('details'); // details, payment, receipt
@@ -247,24 +248,24 @@ export default function PaymentModal({ appointment, onClose, onPaymentSuccess })
             <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Amount</span>
-                <span className="font-semibold text-gray-900">${paymentReceipt.data.receipt.amount}</span>
+                <span className="font-semibold text-gray-900">${paymentReceipt.receipt.amount}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Transaction ID</span>
                 <span className="font-semibold text-gray-900 text-sm">
-                  {paymentReceipt.data.receipt.transactionId}
+                  {paymentReceipt.receipt.transactionId}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Card</span>
                 <span className="font-semibold text-gray-900">
-                  **** {paymentReceipt.data.receipt.cardLastFour}
+                  **** {paymentReceipt.receipt.cardLastFour}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Date</span>
                 <span className="font-semibold text-gray-900">
-                  {new Date(paymentReceipt.data.receipt.date).toLocaleDateString()}
+                  {new Date(paymentReceipt.receipt.date).toLocaleDateString()}
                 </span>
               </div>
             </div>
@@ -273,12 +274,34 @@ export default function PaymentModal({ appointment, onClose, onPaymentSuccess })
               Your doctor will send the prescription shortly. Check your chat for updates.
             </p>
 
-            <button
-              onClick={onClose}
-              className="w-full px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors"
-            >
-              Close
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() =>
+                  downloadPaymentReceiptPdf({
+                    payment: {
+                      _id: paymentReceipt.paymentId,
+                      transactionId: paymentReceipt.receipt.transactionId,
+                      amount: paymentReceipt.receipt.amount,
+                      status: paymentReceipt.status,
+                      cardLastFour: paymentReceipt.receipt.cardLastFour,
+                      updatedAt: paymentReceipt.receipt.date,
+                    },
+                    appointment,
+                    patientName: appointment?.patientId?.name,
+                    doctorName: appointment?.doctorId?.name,
+                  })
+                }
+                className="w-full px-4 py-3 border border-blue-200 text-blue-700 font-medium rounded-lg hover:bg-blue-50 transition-colors"
+              >
+                Download PDF
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         )}
       </div>

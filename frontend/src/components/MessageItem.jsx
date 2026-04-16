@@ -12,6 +12,8 @@ export default function MessageItem({
   appointmentActionLoadingId,
   onPaymentRequired,
   appointmentPaymentStatus,
+  onDownloadPrescription,
+  onDownloadPaymentReceipt,
 }) {
   const formatTime = (date) => {
     try {
@@ -23,6 +25,27 @@ export default function MessageItem({
 
   const renderMessageContent = () => {
     if (message.messageType === 'prescription') {
+      const prescriptionId = message.metadata?.prescriptionId;
+
+      if (currentUserRole === 'patient') {
+        return (
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+            <p className="font-semibold text-blue-900 mb-2">💊 Prescription available</p>
+            <p className="text-sm text-blue-700">
+              Your prescription is ready as a PDF with the doctor name, consultation time, medicines, and notes.
+            </p>
+            {prescriptionId && onDownloadPrescription && (
+              <button
+                onClick={() => onDownloadPrescription(message.metadata)}
+                className="mt-3 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+              >
+                Download PDF
+              </button>
+            )}
+          </div>
+        );
+      }
+
       return (
         <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
           <p className="font-semibold text-blue-900 mb-2">💊 Prescription</p>
@@ -32,7 +55,7 @@ export default function MessageItem({
               <ul className="text-sm text-blue-700 list-disc list-inside">
                 {message.metadata.medicines.map((med, idx) => (
                   <li key={idx}>
-                    {med.name} - {med.dosage} ({med.timing})
+                    {med.name} - {med.dosage} ({med.frequency || med.timing})
                   </li>
                 ))}
               </ul>
@@ -44,6 +67,14 @@ export default function MessageItem({
             </p>
           )}
           {message.text && <p className="text-sm text-blue-700 mt-2">{message.text}</p>}
+          {prescriptionId && onDownloadPrescription && (
+            <button
+              onClick={() => onDownloadPrescription(message.metadata)}
+              className="mt-3 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+            >
+              Download PDF
+            </button>
+          )}
         </div>
       );
     }
@@ -112,9 +143,19 @@ export default function MessageItem({
           {appointmentStatus === 'completed' && currentUserRole === 'patient' && !isOwn && appointmentId && (
             <div className="flex gap-2 mt-3">
               {isPaymentCompleted ? (
-                <div className="px-3 py-1.5 bg-green-100 text-green-800 rounded-lg font-medium text-sm">
-                  Payment Done
-                </div>
+                <>
+                  <div className="px-3 py-1.5 bg-green-100 text-green-800 rounded-lg font-medium text-sm">
+                    Payment Done
+                  </div>
+                  {onDownloadPaymentReceipt && (
+                    <button
+                      onClick={() => onDownloadPaymentReceipt(message.metadata)}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    >
+                      Receipt PDF
+                    </button>
+                  )}
+                </>
               ) : (
                 <button
                   onClick={() => onPaymentRequired && onPaymentRequired(message.metadata)}

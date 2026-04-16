@@ -5,12 +5,14 @@ import axiosInstance from '../services/axios.jsx';
 import { appointmentService } from '../services/appointmentService.jsx';
 import { doctorService } from '../services/doctorService.jsx';
 import { paymentService } from '../services/paymentService.jsx';
+import { prescriptionService } from '../services/prescriptionService.jsx';
 import {
   initializeSocket,
   sendMessage,
   emitUserTyping,
   emitUserStopTyping,
 } from '../services/socketService';
+import { downloadPaymentReceiptPdf, downloadPrescriptionPdf } from '../utils/documentPdf.js';
 import MessageInput from '../components/MessageInput';
 import MessageList from '../components/MessageList';
 import MandatoryRatingModal from '../components/MandatoryRatingModal.jsx';
@@ -34,6 +36,7 @@ export default function ChatPage() {
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const [completedAppointment, setCompletedAppointment] = useState(null);
   const [appointmentPaymentStatus, setAppointmentPaymentStatus] = useState({});
+  const [documentLoadingKey, setDocumentLoadingKey] = useState('');
   const backPath = '/messages';
 
   // Initialize socket and fetch chat history
@@ -482,6 +485,69 @@ export default function ChatPage() {
     }
   };
 
+  const findAppointmentMessageById = (appointmentId) => {
+    return messages.find(
+      (msg) =>
+        msg.messageType === 'appointment' &&
+        String(msg.metadata?.appointmentId) === String(appointmentId)
+    );
+  };
+
+  const handleDownloadPrescription = async (prescriptionMetadata) => {
+    if (!prescriptionMetadata?.prescriptionId) {
+      alert('Prescription PDF is not available for this message.');
+      return;
+    }
+
+    const loadingKey = `prescription-${prescriptionMetadata.prescriptionId}`;
+    setDocumentLoadingKey(loadingKey);
+
+    try {
+      const response = await prescriptionService.getPrescription(prescriptionMetadata.prescriptionId);
+      const prescription = response?.data;
+      const appointmentMessage = findAppointmentMessageById(prescription?.appointmentId);
+
+      downloadPrescriptionPdf({
+        prescription,
+        appointment: appointmentMessage?.metadata,
+        patientName: user?.name,
+        doctorName: otherUser?.name,
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Unable to generate prescription PDF');
+    } finally {
+      setDocumentLoadingKey('');
+    }
+  };
+
+  const handleDownloadPaymentReceipt = async (appointmentMetadata) => {
+    if (!appointmentMetadata?.appointmentId) {
+      alert('Payment receipt PDF is not available for this message.');
+      return;
+    }
+
+    const appointmentId = String(appointmentMetadata.appointmentId);
+    const loadingKey = `payment-${appointmentId}`;
+    setDocumentLoadingKey(loadingKey);
+
+    try {
+      const response = await paymentService.getPaymentDetails(appointmentId);
+      const payment = response?.data;
+      const appointmentMessage = findAppointmentMessageById(appointmentId);
+
+      downloadPaymentReceiptPdf({
+        payment,
+        appointment: appointmentMessage?.metadata || appointmentMetadata,
+        patientName: user?.name,
+        doctorName: otherUser?.name,
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Unable to generate payment receipt PDF');
+    } finally {
+      setDocumentLoadingKey('');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -568,6 +634,8 @@ export default function ChatPage() {
         appointmentActionLoadingId={appointmentActionLoadingId}
         onPaymentRequired={handlePaymentRequired}
         appointmentPaymentStatus={appointmentPaymentStatus}
+        onDownloadPrescription={handleDownloadPrescription}
+        onDownloadPaymentReceipt={handleDownloadPaymentReceipt}
       />
 
       {/* Typing Indicator */}
@@ -590,6 +658,12 @@ export default function ChatPage() {
         onSendPrescription={handleSendPrescription}
         canSendPrescription={Boolean(findLatestPaidCompletedAppointment())}
       />
+
+      {documentLoadingKey && (
+        <div className="px-4 py-2 bg-white border-t border-gray-200 text-sm text-gray-500">
+          Preparing document...
+        </div>
+      )}
     </div>
   );
 }

@@ -4,9 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { appointmentService } from '../services/appointmentService.jsx';
 import { doctorService } from '../services/doctorService.jsx';
+import { paymentService } from '../services/paymentService.jsx';
+import { prescriptionService } from '../services/prescriptionService.jsx';
 import AppointmentStatusBadge from '../components/AppointmentStatusBadge.jsx';
 import MandatoryRatingModal from '../components/MandatoryRatingModal.jsx';
 import { canJoinAppointment, getJoinStatusText } from '../utils/time.js';
+import { downloadPaymentReceiptPdf, downloadPrescriptionPdf } from '../utils/documentPdf.js';
 
 const PatientDashboard = () => {
   const { user } = useSelector((state) => state.auth);
@@ -14,6 +17,7 @@ const PatientDashboard = () => {
   const [appointments, setAppointments] = useState([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [pendingRatings, setPendingRatings] = useState([]);
+  const [documentLoading, setDocumentLoading] = useState('');
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -73,6 +77,48 @@ const PatientDashboard = () => {
 
   const handleRatingSubmitted = (appointmentId) => {
     setPendingRatings((prev) => prev.filter((appt) => String(appt._id) !== String(appointmentId)));
+  };
+
+  const handleDownloadPrescription = async (appointment) => {
+    const loadingKey = `prescription-${appointment._id}`;
+    setDocumentLoading(loadingKey);
+
+    try {
+      const response = await prescriptionService.getPrescriptionByAppointment(appointment._id);
+      const prescription = response?.data;
+
+      downloadPrescriptionPdf({
+        prescription,
+        appointment,
+        patientName: user?.name,
+        doctorName: appointment?.doctorId?.name,
+      });
+    } catch (error) {
+      alert(error.response?.data?.message || 'Unable to generate prescription PDF');
+    } finally {
+      setDocumentLoading('');
+    }
+  };
+
+  const handleDownloadPayment = async (appointment) => {
+    const loadingKey = `payment-${appointment._id}`;
+    setDocumentLoading(loadingKey);
+
+    try {
+      const response = await paymentService.getPaymentDetails(appointment._id);
+      const payment = response?.data;
+
+      downloadPaymentReceiptPdf({
+        payment,
+        appointment,
+        patientName: user?.name,
+        doctorName: appointment?.doctorId?.name,
+      });
+    } catch (error) {
+      alert(error.response?.data?.message || 'Unable to generate payment receipt PDF');
+    } finally {
+      setDocumentLoading('');
+    }
   };
 
   return (
@@ -200,6 +246,24 @@ const PatientDashboard = () => {
                       >
                         End Consultation
                       </button>
+                    )}
+                    {appointment.status === 'completed' && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDownloadPrescription(appointment)}
+                          disabled={documentLoading === `prescription-${appointment._id}`}
+                          className="px-3 py-1.5 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                        >
+                          Prescription PDF
+                        </button>
+                        <button
+                          onClick={() => handleDownloadPayment(appointment)}
+                          disabled={documentLoading === `payment-${appointment._id}`}
+                          className="px-3 py-1.5 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50"
+                        >
+                          Payment PDF
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

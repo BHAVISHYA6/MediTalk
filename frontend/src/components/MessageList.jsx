@@ -11,6 +11,8 @@ export default function MessageList({
   appointmentActionLoadingId,
   onPaymentRequired,
   appointmentPaymentStatus,
+  onDownloadPrescription,
+  onDownloadPaymentReceipt,
 }) {
   const messagesEndRef = useRef(null);
 
@@ -47,6 +49,8 @@ export default function MessageList({
             appointmentActionLoadingId={appointmentActionLoadingId}
             onPaymentRequired={onPaymentRequired}
             appointmentPaymentStatus={appointmentPaymentStatus}
+            onDownloadPrescription={onDownloadPrescription}
+            onDownloadPaymentReceipt={onDownloadPaymentReceipt}
           />
         </div>
       ))}

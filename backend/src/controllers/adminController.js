@@ -27,6 +27,8 @@ export const getPendingDoctors = async (req, res) => {
   }
 };
 
+//hello
+
 // Get all verified doctors
 export const getVerifiedDoctors = async (req, res) => {
   try {

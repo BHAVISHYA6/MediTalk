@@ -132,5 +132,4 @@ npm run preview
 - `PROJECT_REPORT.md` - professional high-level report
 - `PPT_8_SLIDES_CONTENT.md` - ready-to-copy 8-slide presentation content
 
-## License
-For academic and project demonstration use.
+

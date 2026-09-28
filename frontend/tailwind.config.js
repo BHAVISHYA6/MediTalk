@@ -27,14 +27,6 @@ export default {
           700: '#c2410c',
         },
       },
-      spacing: {
-        'xs': '0.5rem',
-        'sm': '1rem',
-        'md': '1.5rem',
-        'lg': '2rem',
-        'xl': '3rem',
-        '2xl': '4rem',
-      },
       borderRadius: {
         'xs': '0.25rem',
         'sm': '0.375rem',

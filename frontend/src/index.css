@@ -1,3 +1,4 @@
+@config "../tailwind.config.js";
 @import "tailwindcss";
 
 /* ===== PROFESSIONAL SAAS COLOR SYSTEM ===== */
@@ -77,11 +78,11 @@
 
   /* Form Elements */
   input, textarea, select {
-    @apply font-inherit;
+    @apply font-[inherit];
   }
 
   button {
-    @apply font-inherit cursor-pointer transition-all duration-150;
+    @apply font-[inherit] cursor-pointer transition-all duration-150;
   }
 
   /* Remove default focus outline */
